@@ -2,7 +2,7 @@ import { motion } from "framer-motion";
 import { ChevronDown, Check } from "lucide-react";
 import NumberTicker from "./NumberTicker";
 
-const ease = [0.16, 1, 0.3, 1];
+const ease = [0.16, 1, 0.3, 1] as const;
 
 const HeroDashboard = () => (
   <div className="bg-navy rounded-2xl p-5 text-primary-foreground w-full max-w-2xl shadow-hero">

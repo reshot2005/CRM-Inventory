@@ -4,7 +4,7 @@ import AnimatedSection from "./AnimatedSection";
 import NumberTicker from "./NumberTicker";
 import { Bot, MapPin, Shield, FileText, Upload, Zap } from "lucide-react";
 
-const ease = [0.16, 1, 0.3, 1];
+const ease = [0.16, 1, 0.3, 1] as const;
 
 const AIChat = () => {
   const [step, setStep] = useState(0);
