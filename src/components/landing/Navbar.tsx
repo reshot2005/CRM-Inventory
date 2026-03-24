@@ -19,21 +19,21 @@ const Navbar = () => {
       initial={{ y: -20, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-      className="fixed top-4 left-1/2 -translate-x-1/2 z-50 w-[95%] max-w-4xl"
+      className="fixed inset-x-0 top-4 z-50 mx-auto w-[95%] max-w-4xl"
     >
       <motion.div
         animate={{ scale: scrolled ? 0.97 : 1 }}
         transition={{ duration: 0.3 }}
         className={`glass-nav rounded-full px-6 py-3 flex items-center justify-between ${scrolled ? "shadow-lg" : ""}`}
       >
-        <a href="#" className="flex items-center gap-2 group">
+        <a href="#" className="group flex items-center gap-2 md:w-[170px] md:shrink-0">
           <motion.div whileHover={{ rotate: 12 }} transition={{ type: "spring", stiffness: 300 }}>
             <Box className="w-6 h-6 text-cobalt" />
           </motion.div>
           <span className="font-heading font-extrabold text-lg text-foreground">StockOS</span>
         </a>
 
-        <div className="hidden md:flex items-center gap-6">
+        <div className="hidden flex-1 items-center justify-center gap-6 md:flex">
           {navLinks.map((link) => (
             <a
               key={link}
@@ -46,7 +46,7 @@ const Navbar = () => {
           ))}
         </div>
 
-        <div className="hidden md:block">
+        <div className="hidden md:flex md:w-[170px] md:shrink-0 md:justify-end">
           <motion.button
             whileHover={{ scale: 1.03 }}
             whileTap={{ scale: 0.97 }}
