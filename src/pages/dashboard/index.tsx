@@ -1,5 +1,14 @@
 import { motion } from "framer-motion";
-import { MoreHorizontal, ChevronRight, FileText, Check } from "lucide-react";
+import {
+  MoreHorizontal,
+  ChevronRight,
+  FileText,
+  Check,
+  LayoutGrid,
+  AlertTriangle,
+  ShoppingCart,
+  Truck,
+} from "lucide-react";
 import { useState } from "react";
 import StatCard from "@/components/shared/StatCard";
 import AlertBanner from "@/components/shared/AlertBanner";
@@ -20,12 +29,12 @@ export default function DashboardIndexPage() {
         subtitle="Live inventory, purchases, sales, and production in one place"
       />
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {[
-          { label: "Total SKUs", value: 1284, iconEmoji: "??", iconBg: "#FFF4F0", ringColor: "#F97316", ringValue: 72 },
-          { label: "Low Stock Items", value: 37, iconEmoji: "??", iconBg: "#FEF3C7", ringColor: "#F59E0B", ringValue: 28 },
-          { label: "Purchase Orders", value: 94, iconEmoji: "??", iconBg: "#ECFDF3", ringColor: "#22C55E", ringValue: 65 },
-          { label: "Pending Deliveries", value: 18, iconEmoji: "??", iconBg: "#E0ECFF", ringColor: "#2563EB", ringValue: 40 },
+          { label: "Total SKUs", value: 1284, icon: LayoutGrid, iconColor: "#EA580C", iconBg: "#FFF4F0", ringColor: "#F97316", ringValue: 72 },
+          { label: "Low Stock Items", value: 37, icon: AlertTriangle, iconColor: "#D97706", iconBg: "#FEF3C7", ringColor: "#F59E0B", ringValue: 28 },
+          { label: "Purchase Orders", value: 94, icon: ShoppingCart, iconColor: "#16A34A", iconBg: "#ECFDF3", ringColor: "#22C55E", ringValue: 65 },
+          { label: "Pending Deliveries", value: 18, icon: Truck, iconColor: "#2563EB", iconBg: "#E0ECFF", ringColor: "#2563EB", ringValue: 40 },
         ].map((card, i) => (
           <motion.div key={card.label} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}>
             <StatCard {...card} />
@@ -36,7 +45,7 @@ export default function DashboardIndexPage() {
       <AlertBanner
         type="warning"
         message="3 items are critically low on stock"
-        action={<a href="#" className="text-sm font-semibold underline">View All Alerts ?</a>}
+        action={<a href="#" className="text-sm font-semibold underline">View all alerts</a>}
       />
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
@@ -126,8 +135,8 @@ export default function DashboardIndexPage() {
       </div>
 
       <motion.div className="flex items-center gap-2 overflow-x-auto rounded-2xl bg-white p-3 shadow-sm" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
-        {["?? Products", "?? Transfers", "?? Purchases", "?? Deliveries", "?? Reports", "?? Production", "?? Challans"].map((tab) => (
-          <button key={tab} className="whitespace-nowrap rounded-lg px-4 py-2 text-sm text-[#64748B] hover:bg-[#E3EBFF] hover:text-[#0F172A]">{tab}</button>
+        {["Products", "Transfers", "Purchases", "Deliveries", "Reports", "Production", "Challans"].map((tab) => (
+          <button key={tab} type="button" className="whitespace-nowrap rounded-lg px-4 py-2 text-sm text-[#64748B] hover:bg-[#E3EBFF] hover:text-[#0F172A]">{tab}</button>
         ))}
       </motion.div>
 

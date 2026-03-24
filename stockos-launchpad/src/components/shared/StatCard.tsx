@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
+import type { LucideIcon } from "lucide-react";
 
 interface StatCardProps {
   label: string;
   value: number;
-  iconEmoji: string;
+  icon: LucideIcon;
+  iconColor: string;
   iconBg: string;
   ringColor: string;
   ringValue: number;
@@ -13,7 +15,8 @@ interface StatCardProps {
 export const StatCard: React.FC<StatCardProps> = ({
   label,
   value,
-  iconEmoji,
+  icon: Icon,
+  iconColor,
   iconBg,
   ringColor,
   ringValue,
@@ -53,10 +56,10 @@ export const StatCard: React.FC<StatCardProps> = ({
     >
       <div className="flex items-center gap-3">
         <div
-          className="flex h-10 w-10 items-center justify-center rounded-xl text-lg"
+          className="flex h-10 w-10 items-center justify-center rounded-xl"
           style={{ backgroundColor: iconBg }}
         >
-          <span>{iconEmoji}</span>
+          <Icon className="h-5 w-5" style={{ color: iconColor }} strokeWidth={2} />
         </div>
         <div>
           <p className="text-[12px] font-medium text-[#334155]">{label}</p>

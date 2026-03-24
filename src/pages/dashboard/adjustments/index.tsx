@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { SlidersHorizontal, Plus, Minus } from "lucide-react";
 import PageHeader from "@/components/shared/PageHeader";
 import StatCard from "@/components/shared/StatCard";
 import DataTable, { type DataColumn } from "@/components/shared/DataTable";
@@ -25,7 +26,7 @@ const columns: DataColumn<Row>[] = [
   {
     id: "actions",
     header: "Actions",
-    render: (r) => r.status === "Pending Approval" ? <div className="flex gap-1"><button className="rounded bg-[#DCFCE7] px-2 py-1 text-xs text-[#166534]">Approve</button><button className="rounded bg-[#FEE2E2] px-2 py-1 text-xs text-[#991B1B]">Reject</button></div> : "ó",
+    render: (r) => r.status === "Pending Approval" ? <div className="flex gap-1"><button className="rounded bg-[#DCFCE7] px-2 py-1 text-xs text-[#166534]">Approve</button><button className="rounded bg-[#FEE2E2] px-2 py-1 text-xs text-[#991B1B]">Reject</button></div> : "ù",
   },
 ];
 
@@ -37,9 +38,9 @@ export default function StockAdjustmentsPage() {
       <PageHeader breadcrumb={["Warehouses", "Stock Adjustments"]} title="Stock Adjustments" subtitle="Reason-based stock corrections with approval workflow" />
 
       <div className="grid gap-4 sm:grid-cols-3">
-        <StatCard label="Adjustments This Month" value={24} iconEmoji="??" iconBg="#E0ECFF" ringColor="#2563EB" ringValue={60} />
-        <StatCard label="Total Added" value={2840} iconEmoji="?" iconBg="#ECFDF3" ringColor="#22C55E" ringValue={70} />
-        <StatCard label="Total Removed" value={1230} iconEmoji="?" iconBg="#FEE2E2" ringColor="#EF4444" ringValue={36} />
+        <StatCard label="Adjustments This Month" value={24} icon={SlidersHorizontal} iconColor="#2563EB" iconBg="#E0ECFF" ringColor="#2563EB" ringValue={60} />
+        <StatCard label="Total Added" value={2840} icon={Plus} iconColor="#16A34A" iconBg="#ECFDF3" ringColor="#22C55E" ringValue={70} />
+        <StatCard label="Total Removed" value={1230} icon={Minus} iconColor="#DC2626" iconBg="#FEE2E2" ringColor="#EF4444" ringValue={36} />
       </div>
 
       <div className="flex flex-wrap gap-2">

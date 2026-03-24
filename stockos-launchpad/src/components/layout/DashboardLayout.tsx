@@ -9,7 +9,7 @@ export default function DashboardLayout() {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
-    <div className="flex min-h-screen bg-[#F6F8FB]">
+    <div className="flex min-h-screen w-full bg-[#F6F8FB]">
       <Sidebar />
 
       <AnimatePresence>
@@ -23,20 +23,23 @@ export default function DashboardLayout() {
         ) : null}
       </AnimatePresence>
 
-      <div className="flex-1 md:ml-[250px]">
-        <header className="sticky top-0 z-40 flex items-center justify-between border-b border-[#E2E8F0] bg-[#F6F8FB]/95 px-4 py-4 backdrop-blur sm:px-6">
-          <div className="flex items-center gap-3">
-            <button type="button" onClick={() => setMobileOpen(true)} className="rounded-lg p-2 hover:bg-[#E2E8F0] md:hidden">
+      {/* Sidebar is already a flex sibling (250px); do not add ml-[250px] or content is shifted twice */}
+      <div className="flex min-h-screen min-w-0 flex-1 flex-col">
+        <header className="sticky top-0 z-40 flex shrink-0 items-center justify-between gap-4 border-b border-[#E2E8F0] bg-[#F6F8FB]/95 px-4 py-4 backdrop-blur sm:px-6">
+          <div className="flex min-w-0 items-center gap-3">
+            <button type="button" onClick={() => setMobileOpen(true)} className="shrink-0 rounded-lg p-2 hover:bg-[#E2E8F0] md:hidden">
               <Menu className="h-5 w-5 text-[#1E2B4A]" />
             </button>
-            <BrandLogo className="h-6 w-6" />
-            <h1 className="text-base text-[#1E2B4A] sm:text-lg"><span className="font-bold">Inventory</span> Management System</h1>
+            <BrandLogo className="h-6 w-6 shrink-0" />
+            <h1 className="truncate text-base text-[#1E2B4A] sm:text-lg">
+              <span className="font-bold">Inventory</span> Management System
+            </h1>
           </div>
 
-          <div className="flex items-center gap-3 sm:gap-4">
+          <div className="flex shrink-0 items-center gap-3 sm:gap-4">
             <div className="relative hidden sm:block">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#64748B]" />
-              <input type="search" placeholder="Search..." className="w-[200px] rounded-xl bg-[#E0ECFF] py-2.5 pl-10 pr-4 text-sm text-[#1E2B4A] placeholder:text-[#64748B] focus:outline-none focus:ring-2 focus:ring-[#2563EB]/30" />
+              <input type="search" placeholder="Search..." className="w-[min(240px,28vw)] rounded-xl bg-[#E0ECFF] py-2.5 pl-10 pr-4 text-sm text-[#1E2B4A] placeholder:text-[#64748B] focus:outline-none focus:ring-2 focus:ring-[#2563EB]/30 lg:w-[280px]" />
             </div>
             <button type="button" className="relative rounded-lg p-2 hover:bg-[#E0ECFF]"><Bell className="h-5 w-5 text-[#1E2B4A]" /><span className="absolute right-1.5 top-1.5 h-2.5 w-2.5 rounded-full bg-[#2563EB]" /></button>
             <button type="button" className="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-[#E0ECFF]">
@@ -46,7 +49,11 @@ export default function DashboardLayout() {
             </button>
           </div>
         </header>
-        <main className="p-4 sm:p-6"><Outlet /></main>
+        <main className="flex-1 min-h-0 min-w-0 overflow-y-auto p-4 sm:p-6">
+          <div className="mx-auto w-full max-w-[1440px]">
+            <Outlet />
+          </div>
+        </main>
       </div>
     </div>
   );

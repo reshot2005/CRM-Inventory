@@ -1,3 +1,4 @@
+import { Boxes, CircleCheck, AlertTriangle, Timer } from "lucide-react";
 import ModuleTablePage from "@/pages/dashboard/ModuleTablePage";
 import type { DataColumn } from "@/components/shared/DataTable";
 import AlertBanner from "@/components/shared/AlertBanner";
@@ -31,10 +32,10 @@ export default function RawMaterialsPage() {
       subtitle="Raw material ledger with supplier linkage and reorder insights"
       alert={<AlertBanner type="info" message="AI Reorder Recommendations: 2 materials need purchase orders this week." />}
       stats={[
-        { label: "Total Raw Materials", value: 426, iconEmoji: "??", iconBg: "#FFF4F0", ringColor: "#F97316", ringValue: 70 },
-        { label: "In Stock", value: 389, iconEmoji: "?", iconBg: "#ECFDF3", ringColor: "#22C55E", ringValue: 82 },
-        { label: "Low Stock", value: 29, iconEmoji: "??", iconBg: "#FEF3C7", ringColor: "#F59E0B", ringValue: 31 },
-        { label: "Avg Reorder Time", value: 6, iconEmoji: "??", iconBg: "#E0ECFF", ringColor: "#2563EB", ringValue: 45 },
+        { label: "Total Raw Materials", value: 426, icon: Boxes, iconColor: "#EA580C", iconBg: "#FFF4F0", ringColor: "#F97316", ringValue: 70 },
+        { label: "In Stock", value: 389, icon: CircleCheck, iconColor: "#16A34A", iconBg: "#ECFDF3", ringColor: "#22C55E", ringValue: 82 },
+        { label: "Low Stock", value: 29, icon: AlertTriangle, iconColor: "#D97706", iconBg: "#FEF3C7", ringColor: "#F59E0B", ringValue: 31 },
+        { label: "Avg Reorder Time", value: 6, icon: Timer, iconColor: "#2563EB", iconBg: "#E0ECFF", ringColor: "#2563EB", ringValue: 45 },
       ]}
       columns={columns}
       data={rows}
