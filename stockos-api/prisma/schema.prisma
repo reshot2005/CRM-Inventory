@@ -1,0 +1,624 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ── ENUMS ──────────────────────────────
+
+enum UserRole {
+  ADMIN
+  MANAGER
+  STAFF
+  VIEWER
+}
+
+enum UserStatus {
+  PENDING
+  ACTIVE
+  SUSPENDED
+  REJECTED
+}
+
+enum ItemCategory {
+  RAW_MATERIAL
+  FINISHED_GOOD
+  PACKAGING
+  OTHER
+}
+
+enum PackagingType {
+  BOX
+  PACKETS
+  BAGS
+  ROLL
+  SHEET
+  SACKS
+  OTHERS
+}
+
+enum MovementType {
+  IN
+  OUT
+  ADJUSTMENT
+  TRANSFER_IN
+  TRANSFER_OUT
+  PRODUCTION_IN
+  PRODUCTION_OUT
+  RETURN
+}
+
+enum MoveOrderType {
+  SALE
+  TRANSFER
+  PURCHASE_RECEIVE
+  RETURN
+}
+
+enum MoveOrderStatus {
+  DRAFT
+  PENDING
+  APPROVED
+  IN_TRANSIT
+  COMPLETED
+  CANCELLED
+}
+
+enum ProductionStatus {
+  PLANNED
+  IN_PROGRESS
+  PAUSED
+  COMPLETED
+  BLOCKED
+  CANCELLED
+}
+
+enum SaleOrderStatus {
+  DRAFT
+  CONFIRMED
+  PROCESSING
+  DISPATCHED
+  DELIVERED
+  CANCELLED
+  RETURNED
+}
+
+enum PaymentMode {
+  CASH
+  CHEQUE
+  NEFT
+  RTGS
+  UPI
+  CREDIT
+}
+
+enum PaymentStatus {
+  PENDING
+  PARTIAL
+  PAID
+  OVERDUE
+}
+
+enum ChallanStatus {
+  DRAFT
+  GENERATED
+  DELIVERED
+}
+
+enum CustomerType {
+  INDIVIDUAL
+  BUSINESS
+}
+
+enum AdjustmentReason {
+  DAMAGED
+  EXPIRED
+  COUNT_CORRECTION
+  RETURN_FROM_CUSTOMER
+  PRODUCTION_WASTE
+  OTHER
+}
+
+// ── MODELS ────────────────────────────
+
+model User {
+  id               String      @id @default(cuid())
+  email            String      @unique
+  passwordHash     String
+  name             String
+  role             UserRole    @default(STAFF)
+  status           UserStatus  @default(PENDING)
+  twoFactorSecret  String?
+  twoFactorEnabled Boolean     @default(false)
+  allowedLocations String[]
+  rejectionReason  String?
+  lastLoginAt      DateTime?
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+  approvedBy       String?
+  approvedAt       DateTime?
+
+  sessions       UserSession[]
+  auditLogs      AuditLog[]
+  moveOrders     MoveOrder[]
+  adjustments    StockAdjustment[]
+  customerNotes  CustomerActivity[]
+
+  @@map("users")
+}
+
+model UserSession {
+  id           String   @id @default(cuid())
+  userId       String
+  refreshToken String   @unique
+  expiresAt    DateTime
+  ipAddress    String?
+  userAgent    String?
+  createdAt    DateTime @default(now())
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_sessions")
+}
+
+model Location {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  code      String   @unique
+  type      String
+  address   String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  inventory  Inventory[]
+  fromOrders MoveOrder[] @relation("FromLocation")
+  toOrders   MoveOrder[] @relation("ToLocation")
+
+  @@map("locations")
+}
+
+model Item {
+  id               String        @id @default(cuid())
+  standardizedName String
+  productCode      String        @unique
+  brand            String?
+  category         ItemCategory
+  packagingType    PackagingType?
+  packagingSize    String?
+  minStockLevel    Float         @default(0)
+  specifications   Json?
+  isActive         Boolean       @default(true)
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  inventory      Inventory[]
+  ledgerEntries  StockLedger[]
+  bomFinished    BOM[]            @relation("BOMFinishedGood")
+  bomLines       BOMLine[]
+  moveOrderLines MoveOrderLine[]
+  adjustments    StockAdjustment[]
+  vendorItems    VendorItem[]
+  saleOrderLines SaleOrderLine[]
+  productionMaterialLines ProductionMaterialLine[]
+
+  @@map("items")
+}
+
+model Inventory {
+  id          String   @id @default(cuid())
+  locationId  String
+  itemId      String
+  quantity    Float    @default(0)
+  reservedQty Float    @default(0)
+  unitCost    Float    @default(0)
+  updatedAt   DateTime @updatedAt
+
+  location Location @relation(fields: [locationId], references: [id])
+  item     Item     @relation(fields: [itemId], references: [id])
+
+  @@unique([locationId, itemId])
+  @@map("inventory")
+}
+
+model StockLedger {
+  id            String       @id @default(cuid())
+  locationId    String
+  itemId        String
+  movementType  MovementType
+  quantity      Float
+  balanceAfter  Float
+  unitCost      Float?
+  referenceType String?
+  referenceId   String?
+  notes         String?
+  createdBy     String
+  createdAt     DateTime     @default(now())
+
+  item Item @relation(fields: [itemId], references: [id])
+
+  @@map("stock_ledger")
+}
+
+model MoveOrder {
+  id             String          @id @default(cuid())
+  orderNumber    String          @unique
+  type           MoveOrderType
+  status         MoveOrderStatus @default(DRAFT)
+  fromLocationId String?
+  toLocationId   String?
+  createdBy      String
+  approvedBy     String?
+  approvedAt     DateTime?
+  dispatchedAt   DateTime?
+  completedAt    DateTime?
+  notes          String?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  fromLocation Location? @relation("FromLocation", fields: [fromLocationId], references: [id])
+  toLocation   Location? @relation("ToLocation", fields: [toLocationId], references: [id])
+  creator      User      @relation(fields: [createdBy], references: [id])
+  lines        MoveOrderLine[]
+  saleOrder    SaleOrder? @relation(fields: [saleOrderId], references: [id])
+  saleOrderId  String?
+
+  @@map("move_orders")
+}
+
+model MoveOrderLine {
+  id            String  @id @default(cuid())
+  moveOrderId   String
+  itemId        String
+  requestedQty  Float
+  dispatchedQty Float?
+  receivedQty   Float?
+
+  moveOrder MoveOrder @relation(fields: [moveOrderId], references: [id], onDelete: Cascade)
+  item      Item      @relation(fields: [itemId], references: [id])
+
+  @@map("move_order_lines")
+}
+
+model StockAdjustment {
+  id         String           @id @default(cuid())
+  itemId     String
+  locationId String
+  quantity   Float
+  reason     AdjustmentReason
+  notes      String?
+  status     String           @default("PENDING")
+  createdBy  String
+  approvedBy String?
+  createdAt  DateTime         @default(now())
+
+  item    Item @relation(fields: [itemId], references: [id])
+  creator User @relation(fields: [createdBy], references: [id])
+
+  @@map("stock_adjustments")
+}
+
+model BOM {
+  id             String   @id @default(cuid())
+  finishedGoodId String
+  version        String   @default("1.0")
+  yieldQty       Float    @default(1)
+  yieldUnit      String   @default("unit")
+  isActive       Boolean  @default(true)
+  notes          String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  item             Item              @relation("BOMFinishedGood", fields: [finishedGoodId], references: [id])
+  lines            BOMLine[]
+  productionOrders ProductionOrder[]
+
+  @@map("boms")
+}
+
+model BOMLine {
+  id            String @id @default(cuid())
+  bomId         String
+  rawMaterialId String
+  quantity      Float
+  unit          String
+  wastePercent  Float  @default(0)
+
+  bom         BOM  @relation(fields: [bomId], references: [id], onDelete: Cascade)
+  rawMaterial Item @relation(fields: [rawMaterialId], references: [id])
+
+  @@map("bom_lines")
+}
+
+model ProductionOrder {
+  id          String           @id @default(cuid())
+  orderNumber String           @unique
+  bomId       String
+  targetQty   Float
+  actualQty   Float?
+  status      ProductionStatus @default(PLANNED)
+  deadline    DateTime?
+  startedAt   DateTime?
+  completedAt DateTime?
+  batchNumber String?
+  notes       String?
+  createdBy   String
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  bom           BOM                      @relation(fields: [bomId], references: [id])
+  materialLines ProductionMaterialLine[]
+
+  @@map("production_orders")
+}
+
+model ProductionMaterialLine {
+  id                String @id @default(cuid())
+  productionOrderId String
+  rawMaterialId     String
+  requiredQty       Float
+  consumedQty       Float?
+  variance          Float?
+
+  productionOrder ProductionOrder @relation(fields: [productionOrderId], references: [id], onDelete: Cascade)
+  rawMaterial     Item            @relation(fields: [rawMaterialId], references: [id])
+
+  @@map("production_material_lines")
+}
+
+model Vendor {
+  id           String   @id @default(cuid())
+  vendorId     String   @unique
+  companyName  String
+  gstin        String?
+  pan          String?
+  paymentTerms String   @default("NET_30")
+  creditLimit  Float?
+  remarks      String?
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  contacts       VendorContact[]
+  items          VendorItem[]
+  documents      Document[]
+  purchaseOrders PurchaseOrder[]
+
+  @@map("vendors")
+}
+
+model VendorContact {
+  id        String   @id @default(cuid())
+  vendorId  String
+  name      String
+  role      String?
+  phones    String[]
+  email     String?
+  isPrimary Boolean  @default(false)
+
+  vendor Vendor @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+
+  @@map("vendor_contacts")
+}
+
+model VendorItem {
+  id           String  @id @default(cuid())
+  vendorId     String
+  itemId       String
+  unitPrice    Float?
+  leadTimeDays Int?
+  isPreferred  Boolean @default(false)
+
+  vendor Vendor @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  item   Item   @relation(fields: [itemId], references: [id])
+
+  @@unique([vendorId, itemId])
+  @@map("vendor_items")
+}
+
+model Customer {
+  id             String       @id @default(cuid())
+  customerId     String       @unique
+  type           CustomerType @default(BUSINESS)
+  companyName    String?
+  primaryContact String
+  phones         String[]
+  address        String?
+  gmapsPlaceId   String?
+  latitude       Float?
+  longitude      Float?
+  gstin          String?
+  pan            String?
+  paymentTerms   String       @default("NET_30")
+  creditLimit    Float?
+  isActive       Boolean      @default(true)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  contacts    CustomerContact[]
+  saleOrders  SaleOrder[]
+  activityLog CustomerActivity[]
+  documents   Document[]
+
+  @@map("customers")
+}
+
+model CustomerContact {
+  id         String   @id @default(cuid())
+  customerId String
+  name       String
+  role       String?
+  phones     String[]
+  email      String?
+  isPrimary  Boolean  @default(false)
+
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@map("customer_contacts")
+}
+
+model CustomerActivity {
+  id         String   @id @default(cuid())
+  customerId String
+  type       String
+  content    String
+  createdBy  String
+  createdAt  DateTime @default(now())
+
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [createdBy], references: [id])
+
+  @@map("customer_activities")
+}
+
+model PurchaseOrder {
+  id           String   @id @default(cuid())
+  poNumber     String   @unique
+  vendorId     String
+  status       String   @default("DRAFT")
+  expectedDate DateTime?
+  totalAmount  Float    @default(0)
+  notes        String?
+  createdBy    String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  vendor    Vendor              @relation(fields: [vendorId], references: [id])
+  lines     PurchaseOrderLine[]
+  documents Document[]
+
+  @@map("purchase_orders")
+}
+
+model PurchaseOrderLine {
+  id              String    @id @default(cuid())
+  purchaseOrderId String
+  itemId          String
+  orderedQty      Float
+  receivedQty     Float     @default(0)
+  unitPrice       Float
+  batchNumber     String?
+  expiryDate      DateTime?
+
+  purchaseOrder PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+
+  @@map("purchase_order_lines")
+}
+
+model SaleOrder {
+  id            String          @id @default(cuid())
+  orderNumber   String          @unique
+  customerId    String
+  status        SaleOrderStatus @default(DRAFT)
+  locationId    String?
+  totalAmount   Float           @default(0)
+  amountPaid    Float           @default(0)
+  paymentStatus PaymentStatus   @default(PENDING)
+  notes         String?
+  dispatchedAt  DateTime?
+  deliveredAt   DateTime?
+  createdBy     String
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  customer Customer        @relation(fields: [customerId], references: [id])
+  lines    SaleOrderLine[]
+  moveOrders MoveOrder[]
+  challans   DeliveryChallan[]
+  payments   Payment[]
+
+  @@map("sale_orders")
+}
+
+model SaleOrderLine {
+  id          String @id @default(cuid())
+  saleOrderId String
+  itemId      String
+  quantity    Float
+  unitPrice   Float
+  totalPrice  Float
+
+  saleOrder SaleOrder @relation(fields: [saleOrderId], references: [id], onDelete: Cascade)
+  item      Item      @relation(fields: [itemId], references: [id])
+
+  @@map("sale_order_lines")
+}
+
+model DeliveryChallan {
+  id            String        @id @default(cuid())
+  challanNumber String        @unique
+  saleOrderId   String
+  fromAddress   String
+  toAddress     String
+  vehicleNo     String?
+  status        ChallanStatus @default(DRAFT)
+  pdfUrl        String?
+  generatedAt   DateTime?
+  deliveredAt   DateTime?
+  createdAt     DateTime      @default(now())
+
+  saleOrder SaleOrder @relation(fields: [saleOrderId], references: [id])
+
+  @@map("delivery_challans")
+}
+
+model Payment {
+  id          String      @id @default(cuid())
+  saleOrderId String
+  amount      Float
+  mode        PaymentMode
+  referenceNo String?
+  notes       String?
+  receivedBy  String
+  receivedAt  DateTime    @default(now())
+
+  saleOrder SaleOrder @relation(fields: [saleOrderId], references: [id])
+
+  @@map("payments")
+}
+
+model Document {
+  id              String         @id @default(cuid())
+  entityType      String
+  entityId        String
+  fileName        String
+  fileKey         String
+  fileUrl         String?
+  mimeType        String
+  fileSize        Int
+  uploadedBy      String
+  uploadedAt      DateTime       @default(now())
+
+  vendor          Vendor?        @relation(fields: [vendorId], references: [id])
+  vendorId        String?
+  customer        Customer?      @relation(fields: [customerId], references: [id])
+  customerId      String?
+  purchaseOrder   PurchaseOrder? @relation(fields: [purchaseOrderId], references: [id])
+  purchaseOrderId String?
+
+  @@map("documents")
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  userId     String
+  action     String
+  entityType String
+  entityId   String
+  oldValues  Json?
+  newValues  Json?
+  ipAddress  String?
+  createdAt  DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("audit_logs")
+}
+
+model SequenceCounter {
+  id      String @id
+  current Int    @default(0)
+
+  @@map("sequence_counters")
+}
