@@ -26,6 +26,7 @@ import {
 } from "lucide-react";
 import { useMemo, useState, type ComponentType } from "react";
 import { Link, useLocation } from "react-router-dom";
+import { BrandLogo } from "@/components/BrandLogo";
 
 interface NavItem { name: string; href: string; Icon: ComponentType<{ size?: number; className?: string }>; }
 interface NavGroup { key: string; label: string; Icon: ComponentType<{ size?: number; className?: string }>; items?: NavItem[]; href?: string; }
@@ -60,16 +61,6 @@ const groups: NavGroup[] = [
   { key: "reports", label: "Reports", Icon: BarChart3, href: "/dashboard/reports" },
 ];
 
-function StockMark() {
-  return (
-    <svg width="28" height="28" viewBox="0 0 48 48" fill="none" aria-hidden>
-      <rect x="8" y="14" width="32" height="24" rx="4" fill="#2563EB" />
-      <path d="M14 14V10C14 8.89 14.89 8 16 8H32C33.11 8 34 8.89 34 10V14" stroke="#5FA8FF" strokeWidth="2" fill="none" />
-      <path d="M18 22H30M18 28H26" stroke="white" strokeWidth="2" strokeLinecap="round" />
-    </svg>
-  );
-}
-
 export default function Sidebar({ mobile = false, onNavigate }: { mobile?: boolean; onNavigate?: () => void; }) {
   const { pathname } = useLocation();
   const [openMap, setOpenMap] = useState<Record<string, boolean>>({ inventory: true });
@@ -79,7 +70,7 @@ export default function Sidebar({ mobile = false, onNavigate }: { mobile?: boole
   return (
     <aside className={`${mobile ? "w-full" : "hidden md:flex w-[250px]"} flex h-full flex-col bg-[#1E2B4A]`}>
       <div className="flex items-center gap-2 px-5 py-5">
-        <StockMark />
+        <BrandLogo className="h-8 w-8" />
         <span className="text-xl font-bold tracking-tight text-white">StockOS</span>
       </div>
       <nav className="flex-1 space-y-0.5 overflow-y-auto px-3 py-2">

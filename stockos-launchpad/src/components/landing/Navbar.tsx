@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Menu, X, Box } from "lucide-react";
+import { Menu, X } from "lucide-react";
+import { BrandLogo } from "@/components/BrandLogo";
 
 const navLinks = ["Dashboard", "Features", "Pricing", "Integrations", "Docs"];
 
@@ -26,9 +27,9 @@ const Navbar = () => {
         transition={{ duration: 0.3 }}
         className={`glass-nav rounded-full px-6 py-3 flex items-center justify-between ${scrolled ? "shadow-lg" : ""}`}
       >
-        <a href="#" className="group flex items-center gap-2 md:w-[170px] md:shrink-0">
-          <motion.div whileHover={{ rotate: 12 }} transition={{ type: "spring", stiffness: 300 }}>
-            <Box className="w-6 h-6 text-cobalt" />
+        <a href="/" className="group flex items-center gap-2 md:w-[170px] md:shrink-0">
+          <motion.div whileHover={{ rotate: 6 }} transition={{ type: "spring", stiffness: 300 }}>
+            <BrandLogo className="h-8 w-8" />
           </motion.div>
           <span className="font-heading font-extrabold text-lg text-foreground">StockOS</span>
         </a>

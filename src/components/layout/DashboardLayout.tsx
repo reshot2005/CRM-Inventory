@@ -2,6 +2,7 @@ import { Menu, Bell, ChevronDown, Search } from "lucide-react";
 import { useState } from "react";
 import { Outlet } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
+import { BrandLogo } from "@/components/BrandLogo";
 import Sidebar from "@/components/layout/Sidebar";
 
 export default function DashboardLayout() {
@@ -28,10 +29,7 @@ export default function DashboardLayout() {
             <button type="button" onClick={() => setMobileOpen(true)} className="rounded-lg p-2 hover:bg-[#E2E8F0] md:hidden">
               <Menu className="h-5 w-5 text-[#1E2B4A]" />
             </button>
-            <svg width="24" height="24" viewBox="0 0 48 48" fill="none" aria-hidden>
-              <rect x="8" y="16" width="32" height="22" rx="4" fill="#2563EB" />
-              <path d="M14 16V12C14 10.89 14.89 10 16 10H32C33.11 10 34 10.89 34 12V16" stroke="#5FA8FF" strokeWidth="2" fill="none" />
-            </svg>
+            <BrandLogo className="h-6 w-6" />
             <h1 className="text-base text-[#1E2B4A] sm:text-lg"><span className="font-bold">Inventory</span> Management System</h1>
           </div>
 

@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none" aria-hidden="true">
+  <defs>
+    <linearGradient id="stockos-a" x1="6" y1="6" x2="42" y2="42" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0F2744"/>
+      <stop offset="1" stop-color="#2563EB"/>
+    </linearGradient>
+    <linearGradient id="stockos-b" x1="24" y1="14" x2="24" y2="38" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFFFFF" stop-opacity="0.95"/>
+      <stop offset="1" stop-color="#BFDBFE" stop-opacity="0.9"/>
+    </linearGradient>
+  </defs>
+  <rect x="4" y="4" width="40" height="40" rx="11" fill="url(#stockos-a)"/>
+  <path d="M12 16h24v3H12v-3zm0 8h18v3H12v-3zm0 8h22v3H12v-3z" fill="url(#stockos-b)"/>
+  <circle cx="36" cy="24" r="4" fill="#60A5FA"/>
+  <path d="M34 24l1.5 1.5L38 21" stroke="#0F2744" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

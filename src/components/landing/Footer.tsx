@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
-import { Box, Linkedin, Twitter, Youtube } from "lucide-react";
+import { Linkedin, Twitter, Youtube } from "lucide-react";
+import { BrandLogo } from "@/components/BrandLogo";
 
 const links = {
   Product: ["Features", "Pricing", "Integrations", "Changelog"],
@@ -16,7 +17,7 @@ const Footer = () => (
       <div className="grid grid-cols-1 md:grid-cols-5 gap-8 mb-12">
         <div className="md:col-span-2">
           <div className="flex items-center gap-2 mb-4">
-            <Box className="w-6 h-6 text-cobalt" />
+            <BrandLogo className="h-8 w-8" />
             <span className="font-heading font-extrabold text-lg text-primary-foreground">StockOS</span>
           </div>
           <p className="text-sm text-primary-foreground/50 font-body mb-6 max-w-xs">
