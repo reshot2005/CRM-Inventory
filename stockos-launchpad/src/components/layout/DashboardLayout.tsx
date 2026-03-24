@@ -9,7 +9,7 @@ export default function DashboardLayout() {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
-    <div className="flex min-h-screen w-full bg-[#F6F8FB]">
+    <div className="flex h-[100dvh] max-h-[100dvh] w-full overflow-hidden bg-[#F6F8FB]">
       <Sidebar />
 
       <AnimatePresence>
@@ -24,7 +24,7 @@ export default function DashboardLayout() {
       </AnimatePresence>
 
       {/* Sidebar is already a flex sibling (250px); do not add ml-[250px] or content is shifted twice */}
-      <div className="flex min-h-screen min-w-0 flex-1 flex-col">
+      <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col">
         <header className="sticky top-0 z-40 flex shrink-0 items-center justify-between gap-4 border-b border-[#E2E8F0] bg-[#F6F8FB]/95 px-4 py-4 backdrop-blur sm:px-6">
           <div className="flex min-w-0 items-center gap-3">
             <button type="button" onClick={() => setMobileOpen(true)} className="shrink-0 rounded-lg p-2 hover:bg-[#E2E8F0] md:hidden">

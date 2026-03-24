@@ -68,12 +68,16 @@ export default function Sidebar({ mobile = false, onNavigate }: { mobile?: boole
   const computedMap = useMemo(() => ({ ...openMap }), [openMap]);
 
   return (
-    <aside className={`${mobile ? "w-full" : "hidden md:flex w-[250px]"} flex h-full flex-col bg-[#1E2B4A]`}>
-      <div className="flex items-center gap-2 px-5 py-5">
+    <aside
+      className={`${
+        mobile ? "h-full w-full" : "hidden h-full w-[250px] shrink-0 md:flex"
+      } flex min-h-0 flex-col bg-[#1E2B4A]`}
+    >
+      <div className="flex shrink-0 items-center gap-2 px-5 py-5">
         <BrandLogo className="h-8 w-8" />
         <span className="text-xl font-bold tracking-tight text-white">StockOS</span>
       </div>
-      <nav className="flex-1 space-y-0.5 overflow-y-auto px-3 py-2">
+      <nav className="min-h-0 flex-1 space-y-0.5 overflow-y-auto overflow-x-hidden px-3 py-2 overscroll-contain">
         {groups.map((group) => {
           if (group.href) {
             const active = pathname === group.href;
