@@ -1,3 +1,4 @@
+import './load-env';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ConfigService } from '@nestjs/config';
@@ -19,9 +20,18 @@ async function bootstrap(): Promise<void> {
     exclude: ['health', 'api/docs'],
   });
 
+  const primary =
+    configService.get<string>('app.frontendUrl') || 'http://localhost:3000';
+  const extra = configService.get<string>('app.corsOrigins') || '';
+  const origins = [
+    primary,
+    ...extra
+      .split(',')
+      .map((o) => o.trim())
+      .filter(Boolean),
+  ];
   app.enableCors({
-    origin:
-      configService.get<string>('app.frontendUrl') || 'http://localhost:3000',
+    origin: origins.length <= 1 ? origins[0] : origins,
     credentials: true,
     methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
     allowedHeaders: [

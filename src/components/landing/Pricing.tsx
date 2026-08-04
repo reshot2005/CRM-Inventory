@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import AnimatedSection from "./AnimatedSection";
 import NumberTicker from "./NumberTicker";
@@ -96,17 +97,30 @@ const Pricing = () => {
                     </motion.li>
                   ))}
                 </ul>
-                <motion.button
-                  whileHover={{ scale: 1.03 }}
-                  whileTap={{ scale: 0.97 }}
-                  className={`w-full py-3 rounded-full text-sm font-body font-semibold transition-all duration-200 ${
-                    plan.popular
-                      ? "shimmer-btn bg-cobalt text-primary-foreground"
-                      : "border border-primary-foreground/20 text-primary-foreground hover:bg-primary-foreground/10"
-                  }`}
-                >
-                  {plan.monthlyPrice > 0 ? "Start Free Trial" : "Talk to Sales"}
-                </motion.button>
+                {plan.monthlyPrice > 0 ? (
+                  <Link to="/register" className="block w-full">
+                    <motion.span
+                      whileHover={{ scale: 1.03 }}
+                      whileTap={{ scale: 0.97 }}
+                      className={`block w-full py-3 rounded-full text-center text-sm font-body font-semibold transition-all duration-200 ${
+                        plan.popular
+                          ? "shimmer-btn bg-cobalt text-primary-foreground"
+                          : "border border-primary-foreground/20 text-primary-foreground hover:bg-primary-foreground/10"
+                      }`}
+                    >
+                      Start Free Trial
+                    </motion.span>
+                  </Link>
+                ) : (
+                  <motion.a
+                    href="mailto:sales@stockos.com?subject=Enterprise%20plan"
+                    whileHover={{ scale: 1.03 }}
+                    whileTap={{ scale: 0.97 }}
+                    className="block w-full py-3 rounded-full text-center text-sm font-body font-semibold border border-primary-foreground/20 text-primary-foreground hover:bg-primary-foreground/10 transition-all duration-200"
+                  >
+                    Talk to Sales
+                  </motion.a>
+                )}
               </motion.div>
             </AnimatedSection>
           ))}

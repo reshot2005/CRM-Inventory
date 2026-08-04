@@ -1,3 +1,4 @@
+import { join } from 'path';
 import {
   MiddlewareConsumer,
   Module,
@@ -14,40 +15,42 @@ import jwtConfig from './config/jwt.config';
 import { PrismaModule } from './prisma/prisma.module';
 import { RedisModule } from './redis/redis.module';
 import { AuthModule } from './modules/auth/auth.module';
+import { SupabaseModule } from './supabase/supabase.module';
 import { UsersModule } from './modules/users/users.module';
-import { InventoryModule } from './modules/inventory/inventory.module';
-import { ManufacturingModule } from './modules/manufacturing/manufacturing.module';
-import { CrmModule } from './modules/crm/crm.module';
-import { SalesModule } from './modules/sales/sales.module';
-import { ReportsModule } from './modules/reports/reports.module';
 
 import { AppController } from './app.controller';
 
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
+import { AccountStatusGuard } from './common/guards/account-status.guard';
 import { RolesGuard } from './common/guards/roles.guard';
 import { PermissionsGuard } from './common/guards/permissions.guard';
 import { createRateLimitMiddleware } from './common/middleware/rate-limit.middleware';
 
+/**
+ * Nest surface after Week 4 retarget:
+ * - Auth (Supabase JWT sync / me / webhook)
+ * - Users (admin approve/reject)
+ * - Health
+ * Inventory/CRM/sales/manufacturing/reports/storage removed — zero callers;
+ * web app uses Supabase direct.
+ */
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
       load: [configuration, databaseConfig, jwtConfig],
-      envFilePath: '.env',
+      envFilePath: join(__dirname, '..', '.env'),
     }),
     PrismaModule,
     RedisModule,
+    SupabaseModule,
     AuthModule,
     UsersModule,
-    InventoryModule,
-    ManufacturingModule,
-    CrmModule,
-    SalesModule,
-    ReportsModule,
   ],
   controllers: [AppController],
   providers: [
     { provide: APP_GUARD, useClass: JwtAuthGuard },
+    { provide: APP_GUARD, useClass: AccountStatusGuard },
     { provide: APP_GUARD, useClass: RolesGuard },
     { provide: APP_GUARD, useClass: PermissionsGuard },
   ],

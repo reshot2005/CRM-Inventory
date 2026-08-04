@@ -1,0 +1,52 @@
+{
+  "status": "PASS",
+  "started": "2026-08-03T10:45:17.247Z",
+  "ended": "2026-08-03T10:45:28.487Z",
+  "nullCheck": [
+    "profiles\ttotal=2\tnulls=0",
+    "locations\ttotal=6\tnulls=0",
+    "items\ttotal=20\tnulls=0",
+    "inventory\ttotal=22\tnulls=0",
+    "stock_ledger\ttotal=25\tnulls=0",
+    "stock_adjustments\ttotal=0\tnulls=0",
+    "move_orders\ttotal=0\tnulls=0",
+    "move_order_lines\ttotal=0\tnulls=0",
+    "vendors\ttotal=4\tnulls=0",
+    "vendor_contacts\ttotal=0\tnulls=0",
+    "vendor_items\ttotal=0\tnulls=0",
+    "purchase_orders\ttotal=1\tnulls=0",
+    "purchase_order_lines\ttotal=1\tnulls=0",
+    "customers\ttotal=4\tnulls=0",
+    "customer_contacts\ttotal=0\tnulls=0",
+    "customer_activities\ttotal=0\tnulls=0",
+    "sale_orders\ttotal=1\tnulls=0",
+    "sale_order_lines\ttotal=1\tnulls=0",
+    "payments\ttotal=0\tnulls=0",
+    "delivery_challans\ttotal=0\tnulls=0",
+    "boms\ttotal=1\tnulls=0",
+    "bom_lines\ttotal=1\tnulls=0",
+    "production_orders\ttotal=1\tnulls=0",
+    "production_material_lines\ttotal=1\tnulls=0",
+    "documents\ttotal=0\tnulls=0",
+    "audit_logs\ttotal=0\tnulls=0",
+    "machines\ttotal=0\tnulls=0",
+    "batches\ttotal=1\tnulls=0",
+    "labour_entries\ttotal=0\tnulls=0",
+    "notifications\ttotal=1\tnulls=0",
+    "auth_users_without_active_owner_membership\t0"
+  ],
+  "isolation": {
+    "ok": true,
+    "owner_items": 10,
+    "outsider_items": 10,
+    "cross_leak": 0,
+    "kpis": {
+      "total_skus": 9,
+      "revenue_mtd": 500,
+      "low_stock_items": 1,
+      "pending_deliveries": 1,
+      "pending_adjustments": 0,
+      "open_purchase_orders": 0
+    }
+  }
+}

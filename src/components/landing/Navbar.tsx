@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Menu, X } from "lucide-react";
 import { BrandLogo } from "@/components/BrandLogo";
@@ -48,13 +49,15 @@ const Navbar = () => {
         </div>
 
         <div className="hidden md:flex md:w-[170px] md:shrink-0 md:justify-end">
-          <motion.button
-            whileHover={{ scale: 1.03 }}
-            whileTap={{ scale: 0.97 }}
-            className="shimmer-btn bg-cobalt text-primary-foreground px-5 py-2 rounded-full text-sm font-body font-semibold"
-          >
-            Get Started
-          </motion.button>
+          <Link to="/login">
+            <motion.span
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.97 }}
+              className="inline-block shimmer-btn bg-cobalt text-primary-foreground px-5 py-2 rounded-full text-sm font-body font-semibold"
+            >
+              Get Started
+            </motion.span>
+          </Link>
         </div>
 
         <button className="md:hidden" onClick={() => setMobileOpen(!mobileOpen)}>
@@ -81,9 +84,13 @@ const Navbar = () => {
                 {link}
               </a>
             ))}
-            <button className="shimmer-btn bg-cobalt text-primary-foreground px-5 py-2.5 rounded-full text-sm font-semibold mt-1">
+            <Link
+              to="/login"
+              className="shimmer-btn bg-cobalt text-primary-foreground px-5 py-2.5 rounded-full text-sm font-semibold mt-1 text-center"
+              onClick={() => setMobileOpen(false)}
+            >
               Get Started
-            </button>
+            </Link>
           </motion.div>
         )}
       </AnimatePresence>

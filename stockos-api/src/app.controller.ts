@@ -1,5 +1,6 @@
 import { Controller, Get } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ConfigService } from '@nestjs/config';
 import { PrismaService } from './prisma/prisma.service';
 import { RedisService } from './redis/redis.service';
 import { Public } from './common/decorators/public.decorator';
@@ -8,6 +9,7 @@ interface HealthCheckResponse {
   status: 'ok' | 'degraded' | 'down';
   database: 'connected' | 'error';
   redis: 'connected' | 'error';
+  supabase: 'connected' | 'not_configured';
   uptime: number;
   timestamp: string;
   version: string;
@@ -19,6 +21,7 @@ export class AppController {
   constructor(
     private readonly prisma: PrismaService,
     private readonly redis: RedisService,
+    private readonly configService: ConfigService,
   ) {}
 
   @Get('health')
@@ -49,10 +52,16 @@ export class AppController {
           ? 'down'
           : 'degraded';
 
+    const supabaseUrl = this.configService.get<string>('app.supabase.url');
+    const supabaseStatus: HealthCheckResponse['supabase'] = supabaseUrl
+      ? 'connected'
+      : 'not_configured';
+
     return {
       status,
       database: dbStatus,
       redis: redisStatus,
+      supabase: supabaseStatus,
       uptime: Math.floor(uptimeSeconds),
       timestamp: new Date().toISOString(),
       version: '1.0.0',

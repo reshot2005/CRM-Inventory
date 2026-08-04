@@ -1,0 +1,104 @@
+# StockOS app layer (API + Web + Redis + Nginx)
+# Run AFTER self-hosted Supabase is up (see deploy.sh).
+#
+# Usage (from repo root on VPS):
+#   cd deploy/vps && cp .env.example .env && nano .env
+#   docker compose up -d --build
+
+name: stockos
+
+services:
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    volumes:
+      - stockos_redis:/data
+    networks:
+      - stockos
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  api:
+    build:
+      context: ../../stockos-api
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: production
+      PORT: "3001"
+      REDIS_URL: redis://redis:6379
+      # Postgres is the Supabase DB container on the shared network
+      DATABASE_URL: ${DATABASE_URL}
+      DIRECT_DATABASE_URL: ${DIRECT_DATABASE_URL}
+      FRONTEND_URL: ${FRONTEND_URL}
+      SUPABASE_URL: ${SUPABASE_URL}
+      SUPABASE_ANON_KEY: ${SUPABASE_ANON_KEY}
+      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY}
+      SUPABASE_JWT_SECRET: ${SUPABASE_JWT_SECRET}
+      SUPABASE_WEBHOOK_SECRET: ${SUPABASE_WEBHOOK_SECRET}
+      SUPABASE_AUTO_APPROVE_SIGNUPS: ${SUPABASE_AUTO_APPROVE_SIGNUPS:-true}
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
+      BCRYPT_ROUNDS: ${BCRYPT_ROUNDS:-12}
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - stockos
+      - supabase_default
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3001/health"]
+      interval: 30s
+      timeout: 5s
+      start_period: 60s
+      retries: 5
+
+  web:
+    build:
+      context: ../../stockos-web
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL}
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
+        NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL}
+    restart: unless-stopped
+    environment:
+      NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
+      NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL}
+      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY}
+    depends_on:
+      - api
+    networks:
+      - stockos
+
+  nginx:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - web
+      - api
+    networks:
+      - stockos
+      - supabase_default
+
+volumes:
+  stockos_redis:
+
+networks:
+  stockos:
+    driver: bridge
+  # Created by official Supabase docker compose (name may vary — adjust if needed)
+  supabase_default:
+    external: true

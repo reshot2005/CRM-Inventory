@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ChevronDown, Check } from "lucide-react";
 import NumberTicker from "./NumberTicker";
@@ -117,13 +118,15 @@ const Hero = () => {
           transition={{ duration: 0.7, delay: 0.36, ease }}
           className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-4"
         >
-          <motion.button
-            whileHover={{ scale: 1.03 }}
-            whileTap={{ scale: 0.97 }}
-            className="shimmer-btn bg-cobalt text-primary-foreground px-8 py-3.5 rounded-full font-body font-semibold text-base"
-          >
-            Start Free Trial →
-          </motion.button>
+          <Link to="/register">
+            <motion.span
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.97 }}
+              className="inline-block shimmer-btn bg-cobalt text-primary-foreground px-8 py-3.5 rounded-full font-body font-semibold text-base"
+            >
+              Start Free Trial →
+            </motion.span>
+          </Link>
           <motion.button
             whileHover={{ scale: 1.03, backgroundColor: "rgba(255,255,255,1)", color: "hsl(222,47%,11%)" }}
             whileTap={{ scale: 0.97 }}

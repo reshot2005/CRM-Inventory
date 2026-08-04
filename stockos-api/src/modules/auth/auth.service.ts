@@ -1,26 +1,43 @@
 import {
+  BadRequestException,
   ConflictException,
   ForbiddenException,
+  GoneException,
+  Inject,
   Injectable,
   Logger,
+  NotFoundException,
+  Optional,
   UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
+import { createClient } from '@supabase/supabase-js';
+import { Prisma, User } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
 import * as crypto from 'crypto';
 import * as speakeasy from 'speakeasy';
 import * as QRCode from 'qrcode';
 import { PrismaService } from '../../prisma/prisma.service';
 import { RedisService } from '../../redis/redis.service';
+import { SUPABASE_CLIENT } from '../../config/supabase.config';
+import type { SupabaseClient } from '@supabase/supabase-js';
 import { RegisterDto, ChangePasswordDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { Verify2FADto } from './dto/verify-2fa.dto';
-import { TwoFactorCodeDto } from './dto/verify-2fa.dto';
 import { AuthResponseDto, TwoFactorRequiredDto } from './dto/auth-response.dto';
-import { JwtPayload, TempJwtPayload } from '../../common/types/jwt-payload.type';
-import { UserRole } from '../../common/types/user-role.enum';
+import { AdminCreateSupabaseUserDto } from './dto/admin-create-supabase-user.dto';
+import {
+  AccountStatus,
+  JwtPayload,
+  TempJwtPayload,
+} from '../../common/types/jwt-payload.type';
+import {
+  ROLE_PERMISSIONS,
+  UserRole,
+} from '../../common/types/user-role.enum';
 import { ERROR_CODES } from '../../common/types/error-codes';
+import { type RegistrationProfile } from './utils/registration-profile.util';
 
 interface TokenPair {
   accessToken: string;
@@ -34,6 +51,7 @@ interface UserForTokens {
   role: UserRole;
   name: string;
   allowedLocations: string[];
+  status: AccountStatus;
 }
 
 @Injectable()
@@ -45,11 +63,22 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
     private readonly redis: RedisService,
+    @Optional()
+    @Inject(SUPABASE_CLIENT)
+    private readonly supabase: SupabaseClient | null,
   ) {}
 
   async register(
     dto: RegisterDto,
   ): Promise<{ id: string; email: string; name: string; status: string }> {
+    if (this.configService.get<string>('app.supabase.url')) {
+      throw new GoneException({
+        message:
+          'Registration is handled client-side via Supabase Auth SDK. Use the web app to sign up.',
+        code: 'AUTH_REGISTER_DEPRECATED',
+      });
+    }
+
     const existing = await this.prisma.user.findUnique({
       where: { email: dto.email },
     });
@@ -65,7 +94,10 @@ export class AuthService {
       data: {
         email: dto.email,
         passwordHash,
-        name: dto.name,
+        name: dto.name.trim(),
+        phone: dto.phone?.trim() || null,
+        companyName: dto.companyName?.trim() || null,
+        jobTitle: dto.jobTitle?.trim() || null,
         role: 'STAFF',
         status: 'PENDING',
         allowedLocations: [],
@@ -121,6 +153,14 @@ export class AuthService {
       } as Record<string, unknown>);
     }
 
+    if (!user.passwordHash) {
+      throw new UnauthorizedException({
+        code: ERROR_CODES.AUTH_001.code,
+        message:
+          'This account signs in with Supabase. Use the web app or Supabase-backed login.',
+      });
+    }
+
     const passwordValid = await bcrypt.compare(dto.password, user.passwordHash);
     if (!passwordValid) {
       throw new UnauthorizedException({
@@ -152,6 +192,7 @@ export class AuthService {
       role: user.role as UserRole,
       name: user.name,
       allowedLocations: user.allowedLocations,
+      status: user.status as AccountStatus,
     });
 
     const refreshExpires =
@@ -241,6 +282,7 @@ export class AuthService {
       role: user.role as UserRole,
       name: user.name,
       allowedLocations: user.allowedLocations,
+      status: user.status as AccountStatus,
     });
 
     const refreshExpires =
@@ -369,6 +411,7 @@ export class AuthService {
       role: user.role as UserRole,
       name: user.name,
       allowedLocations: user.allowedLocations,
+      status: user.status as AccountStatus,
     });
 
     const expiresAt = this.calculateExpiry(refreshExpires);
@@ -528,7 +571,12 @@ export class AuthService {
   ): Promise<{ changed: boolean }> {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
-      select: { id: true, passwordHash: true },
+      select: {
+        id: true,
+        passwordHash: true,
+        email: true,
+        supabaseId: true,
+      },
     });
 
     if (!user) {
@@ -536,6 +584,15 @@ export class AuthService {
         code: ERROR_CODES.AUTH_001.code,
         message: 'User not found',
       });
+    }
+
+    if (!user.passwordHash) {
+      await this.changePasswordViaSupabase(user, dto);
+      await this.revokeAllSessionsAfterPasswordChange(userId);
+      this.logger.log(
+        `Password changed via Supabase for user ${userId}, all sessions revoked`,
+      );
+      return { changed: true };
     }
 
     const passwordValid = await bcrypt.compare(
@@ -557,6 +614,300 @@ export class AuthService {
       data: { passwordHash: newHash },
     });
 
+    await this.revokeAllSessionsAfterPasswordChange(userId);
+
+    this.logger.log(`Password changed for user ${userId}, all sessions revoked`);
+
+    return { changed: true };
+  }
+
+  async getMe(
+    userId: string,
+  ): Promise<{
+    id: string;
+    email: string;
+    name: string;
+    phone: string | null;
+    companyName: string | null;
+    jobTitle: string | null;
+    role: string;
+    status: string;
+    twoFactorEnabled: boolean;
+    allowedLocations: string[];
+    lastLoginAt: Date | null;
+    createdAt: Date;
+    permissions: string[];
+  }> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        phone: true,
+        companyName: true,
+        jobTitle: true,
+        role: true,
+        status: true,
+        twoFactorEnabled: true,
+        allowedLocations: true,
+        lastLoginAt: true,
+        createdAt: true,
+      },
+    });
+
+    if (!user) {
+      throw new UnauthorizedException({
+        code: ERROR_CODES.AUTH_006.code,
+        message: ERROR_CODES.AUTH_006.message,
+      });
+    }
+
+    return {
+      ...user,
+      permissions: ROLE_PERMISSIONS[user.role as UserRole] ?? [],
+    };
+  }
+
+  async syncUserFromSupabase(
+    supabaseId: string,
+    email: string,
+    profile: RegistrationProfile,
+  ): Promise<User> {
+    const existingBySupabase = await this.prisma.user.findUnique({
+      where: { supabaseId },
+    });
+
+    if (existingBySupabase) {
+      const patch: Prisma.UserUpdateInput = {};
+      if (existingBySupabase.email !== email) {
+        patch.email = email;
+      }
+      if (existingBySupabase.name !== profile.name) {
+        patch.name = profile.name;
+      }
+      if ((existingBySupabase.phone ?? null) !== (profile.phone ?? null)) {
+        patch.phone = profile.phone;
+      }
+      if (
+        (existingBySupabase.companyName ?? null) !==
+        (profile.companyName ?? null)
+      ) {
+        patch.companyName = profile.companyName;
+      }
+      if ((existingBySupabase.jobTitle ?? null) !== (profile.jobTitle ?? null)) {
+        patch.jobTitle = profile.jobTitle;
+      }
+      if (Object.keys(patch).length > 0) {
+        return this.prisma.user.update({
+          where: { id: existingBySupabase.id },
+          data: patch,
+        });
+      }
+      return existingBySupabase;
+    }
+
+    const byEmail = await this.prisma.user.findUnique({ where: { email } });
+    if (byEmail) {
+      return this.prisma.user.update({
+        where: { id: byEmail.id },
+        data: {
+          supabaseId,
+          name: profile.name,
+          phone: profile.phone,
+          companyName: profile.companyName,
+          jobTitle: profile.jobTitle,
+        },
+      });
+    }
+
+    const autoApprove = this.configService.get<boolean>(
+      'app.supabase.autoApproveSignups',
+    );
+    const initialStatus = autoApprove ? 'ACTIVE' : 'PENDING';
+
+    return this.prisma.user.create({
+      data: {
+        supabaseId,
+        email,
+        name: profile.name,
+        phone: profile.phone,
+        companyName: profile.companyName,
+        jobTitle: profile.jobTitle,
+        passwordHash: null,
+        role: 'STAFF',
+        status: initialStatus,
+        allowedLocations: [],
+      },
+    });
+  }
+
+  async updateLastLogin(userId: string): Promise<void> {
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { lastLoginAt: new Date() },
+    });
+  }
+
+  /** Sync approval state to Supabase Auth user_metadata (optional). */
+  async notifySupabaseUserApproved(supabaseId: string | null): Promise<void> {
+    if (!supabaseId || !this.supabase) {
+      return;
+    }
+    const { error } = await this.supabase.auth.admin.updateUserById(
+      supabaseId,
+      {
+        user_metadata: { status: 'ACTIVE', approved: true },
+      },
+    );
+    if (error) {
+      this.logger.warn(
+        `Supabase updateUserById failed for ${supabaseId}: ${error.message}`,
+      );
+    }
+  }
+
+  async adminCreateSupabaseUser(
+    dto: AdminCreateSupabaseUserDto,
+    adminId: string,
+  ): Promise<User> {
+    if (!this.supabase) {
+      throw new BadRequestException(
+        'Supabase is not configured on this server',
+      );
+    }
+
+    const existing = await this.prisma.user.findUnique({
+      where: { email: dto.email },
+    });
+    if (existing) {
+      throw new ConflictException('Email already registered');
+    }
+
+    const { data, error } = await this.supabase.auth.admin.createUser({
+      email: dto.email,
+      password: dto.password,
+      email_confirm: true,
+      user_metadata: { name: dto.name },
+    });
+
+    if (error || !data.user) {
+      throw new BadRequestException(
+        error?.message ?? 'Failed to create Supabase user',
+      );
+    }
+
+    const role = dto.role ?? 'STAFF';
+    const allowedLocations = dto.allowedLocations ?? [];
+
+    const user = await this.prisma.$transaction(async (tx) => {
+      const created = await tx.user.create({
+        data: {
+          supabaseId: data.user.id,
+          email: dto.email,
+          name: dto.name,
+          passwordHash: null,
+          role,
+          status: 'ACTIVE',
+          allowedLocations,
+        },
+      });
+
+      return created;
+    });
+
+    this.logger.log(
+      `Admin ${adminId} created Supabase-linked user ${user.email} (${user.id})`,
+    );
+
+    return user;
+  }
+
+  async adminRevokeSupabaseUser(
+    adminId: string,
+    targetUserId: string,
+  ): Promise<{ suspended: boolean }> {
+    const target = await this.prisma.user.findUnique({
+      where: { id: targetUserId },
+    });
+    if (!target) {
+      throw new NotFoundException(`User ${targetUserId} not found`);
+    }
+
+    if (target.supabaseId && this.supabase) {
+      const { error } = await this.supabase.auth.admin.deleteUser(
+        target.supabaseId,
+      );
+      if (error) {
+        this.logger.warn(
+          `Supabase deleteUser failed for ${target.supabaseId}: ${error.message}`,
+        );
+      }
+    }
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.userSession.deleteMany({ where: { userId: targetUserId } });
+      await tx.user.update({
+        where: { id: targetUserId },
+        data: {
+          status: 'SUSPENDED',
+          supabaseId: null,
+        },
+      });
+    });
+
+    return { suspended: true };
+  }
+
+  private async changePasswordViaSupabase(
+    user: {
+      id: string;
+      email: string;
+      supabaseId: string | null;
+    },
+    dto: ChangePasswordDto,
+  ): Promise<void> {
+    if (!user.supabaseId) {
+      throw new BadRequestException(
+        'This account has no linked Supabase identity; set a password in the database or contact support.',
+      );
+    }
+
+    const url = this.configService.get<string>('app.supabase.url');
+    const anonKey = this.configService.get<string>('app.supabase.anonKey');
+    if (!url || !anonKey || !this.supabase) {
+      throw new BadRequestException(
+        'Supabase is not fully configured (need URL, anon key, and service role)',
+      );
+    }
+
+    const anonClient = createClient(url, anonKey, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    });
+
+    const { error: signErr } = await anonClient.auth.signInWithPassword({
+      email: user.email,
+      password: dto.oldPassword,
+    });
+
+    if (signErr) {
+      throw new UnauthorizedException({
+        code: ERROR_CODES.AUTH_001.code,
+        message: 'Current password is incorrect',
+      });
+    }
+
+    const { error: updateErr } = await this.supabase.auth.admin.updateUserById(
+      user.supabaseId,
+      { password: dto.newPassword },
+    );
+
+    if (updateErr) {
+      throw new BadRequestException(updateErr.message);
+    }
+  }
+
+  private async revokeAllSessionsAfterPasswordChange(userId: string): Promise<void> {
     const sessions = await this.prisma.userSession.findMany({
       where: { userId },
     });
@@ -587,48 +938,6 @@ export class AuthService {
     }
 
     await this.prisma.userSession.deleteMany({ where: { userId } });
-
-    this.logger.log(`Password changed for user ${userId}, all sessions revoked`);
-
-    return { changed: true };
-  }
-
-  async getMe(
-    userId: string,
-  ): Promise<{
-    id: string;
-    email: string;
-    name: string;
-    role: string;
-    status: string;
-    twoFactorEnabled: boolean;
-    allowedLocations: string[];
-    lastLoginAt: Date | null;
-    createdAt: Date;
-  }> {
-    const user = await this.prisma.user.findUnique({
-      where: { id: userId },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        role: true,
-        status: true,
-        twoFactorEnabled: true,
-        allowedLocations: true,
-        lastLoginAt: true,
-        createdAt: true,
-      },
-    });
-
-    if (!user) {
-      throw new UnauthorizedException({
-        code: ERROR_CODES.AUTH_006.code,
-        message: ERROR_CODES.AUTH_006.message,
-      });
-    }
-
-    return user;
   }
 
   private async generateTokens(user: UserForTokens): Promise<TokenPair> {
@@ -641,6 +950,7 @@ export class AuthService {
       name: user.name,
       allowedLocations: user.allowedLocations,
       jti,
+      accountStatus: user.status,
     };
 
     const accessExpires =

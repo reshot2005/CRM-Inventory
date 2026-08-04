@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import AnimatedSection from "./AnimatedSection";
 
@@ -17,13 +18,15 @@ const FinalCTA = () => (
           Join 500+ businesses already running smarter with StockOS.
         </p>
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-          <motion.button
-            whileHover={{ scale: 1.03 }}
-            whileTap={{ scale: 0.97 }}
-            className="bg-primary-foreground text-navy px-8 py-3.5 rounded-full font-body font-bold text-base shadow-lg hover:shadow-xl transition-shadow"
-          >
-            Start Free Trial
-          </motion.button>
+          <Link to="/register">
+            <motion.span
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.97 }}
+              className="inline-block bg-primary-foreground text-navy px-8 py-3.5 rounded-full font-body font-bold text-base shadow-lg hover:shadow-xl transition-shadow"
+            >
+              Start Free Trial
+            </motion.span>
+          </Link>
           <motion.button
             whileHover={{ scale: 1.03 }}
             whileTap={{ scale: 0.97 }}

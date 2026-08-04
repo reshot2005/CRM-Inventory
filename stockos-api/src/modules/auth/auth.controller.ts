@@ -38,6 +38,7 @@ export class AuthController {
   @ApiOperation({ summary: 'Register a new user account (status: PENDING)' })
   @ApiBody({ type: RegisterDto })
   @ApiResponse({ status: 201, description: 'User registered successfully' })
+  @ApiResponse({ status: 410, description: 'Registration moved to Supabase (when configured)' })
   @ApiResponse({ status: 409, description: 'Email already registered' })
   async register(@Body() dto: RegisterDto) {
     return this.authService.register(dto);
@@ -168,6 +169,27 @@ export class AuthController {
   @ApiResponse({ status: 200, description: 'Current user profile' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   async me(@CurrentUser() user: JwtPayload) {
+    return this.authService.getMe(user.sub);
+  }
+
+  @Post('sync')
+  @HttpCode(HttpStatus.OK)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({
+    summary:
+      'Sync Supabase profile to application DB and return enriched profile',
+  })
+  @ApiResponse({ status: 200, description: 'Profile synced' })
+  async syncProfile(@CurrentUser() user: JwtPayload) {
+    if (user.supabaseSub) {
+      await this.authService.syncUserFromSupabase(user.supabaseSub, user.email, {
+        name: user.name,
+        phone: user.phone ?? null,
+        companyName: user.companyName ?? null,
+        jobTitle: user.jobTitle ?? null,
+      });
+      await this.authService.updateLastLogin(user.sub);
+    }
     return this.authService.getMe(user.sub);
   }
 

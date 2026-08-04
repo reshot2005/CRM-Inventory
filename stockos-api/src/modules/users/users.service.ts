@@ -4,6 +4,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { AuthService } from '../auth/auth.service';
 import { Prisma, UserRole, UserStatus } from '@prisma/client';
 import { UpdateUserDto } from './dto/update-user.dto';
 
@@ -11,6 +12,9 @@ const USER_SELECT = {
   id: true,
   email: true,
   name: true,
+  phone: true,
+  companyName: true,
+  jobTitle: true,
   role: true,
   status: true,
   twoFactorEnabled: true,
@@ -25,7 +29,10 @@ const USER_SELECT = {
 
 @Injectable()
 export class UsersService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly authService: AuthService,
+  ) {}
 
   async findAll(query: {
     status?: UserStatus;
@@ -43,6 +50,9 @@ export class UsersService {
       where.OR = [
         { name: { contains: search, mode: 'insensitive' } },
         { email: { contains: search, mode: 'insensitive' } },
+        { phone: { contains: search, mode: 'insensitive' } },
+        { companyName: { contains: search, mode: 'insensitive' } },
+        { jobTitle: { contains: search, mode: 'insensitive' } },
       ];
     }
 
@@ -98,8 +108,8 @@ export class UsersService {
       throw new BadRequestException('Only PENDING users can be approved');
     }
 
-    return this.prisma.$transaction(async (tx) => {
-      const updated = await tx.user.update({
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const row = await tx.user.update({
         where: { id: userId },
         data: {
           status: 'ACTIVE',
@@ -110,19 +120,12 @@ export class UsersService {
         select: USER_SELECT,
       });
 
-      await tx.auditLog.create({
-        data: {
-          userId: adminId,
-          action: 'APPROVE_USER',
-          entityType: 'User',
-          entityId: userId,
-          oldValues: { status: user.status, role: user.role },
-          newValues: { status: 'ACTIVE', role },
-        },
-      });
-
-      return updated;
+      return row;
     });
+
+    await this.authService.notifySupabaseUserApproved(user.supabaseId);
+
+    return updated;
   }
 
   async reject(adminId: string, userId: string, reason: string) {
@@ -142,17 +145,6 @@ export class UsersService {
         select: USER_SELECT,
       });
 
-      await tx.auditLog.create({
-        data: {
-          userId: adminId,
-          action: 'REJECT_USER',
-          entityType: 'User',
-          entityId: userId,
-          oldValues: { status: user.status },
-          newValues: { status: 'REJECTED', rejectionReason: reason },
-        },
-      });
-
       return updated;
     });
   }
@@ -168,17 +160,6 @@ export class UsersService {
         where: { id: userId },
         data: { status: 'SUSPENDED' },
         select: USER_SELECT,
-      });
-
-      await tx.auditLog.create({
-        data: {
-          userId: adminId,
-          action: 'SUSPEND_USER',
-          entityType: 'User',
-          entityId: userId,
-          oldValues: { status: user.status },
-          newValues: { status: 'SUSPENDED' },
-        },
       });
 
       return updated;
@@ -216,17 +197,6 @@ export class UsersService {
         select: USER_SELECT,
       });
 
-      await tx.auditLog.create({
-        data: {
-          userId: adminId,
-          action: 'UPDATE_USER',
-          entityType: 'User',
-          entityId: userId,
-          oldValues: oldValues as Prisma.InputJsonValue,
-          newValues: newValues as Prisma.InputJsonValue,
-        },
-      });
-
       return updated;
     });
   }
@@ -237,23 +207,7 @@ export class UsersService {
 
     await this.prisma.$transaction(async (tx) => {
       await tx.userSession.deleteMany({ where: { userId } });
-      await tx.auditLog.deleteMany({ where: { userId } });
       await tx.user.delete({ where: { id: userId } });
-
-      await tx.auditLog.create({
-        data: {
-          userId: adminId,
-          action: 'DELETE_USER',
-          entityType: 'User',
-          entityId: userId,
-          oldValues: {
-            email: user.email,
-            name: user.name,
-            role: user.role,
-            status: user.status,
-          },
-        },
-      });
     });
 
     return { message: 'User deleted successfully' };
